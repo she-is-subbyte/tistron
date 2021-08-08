@@ -1,0 +1,36 @@
+{
+    "commands": [
+        {"name": "smile!","defaultWeight": 0.5, "weightOffset": 500},
+        {"name": "Obey","defaultWeight": 0.5, "weightOffset": 500},
+        {"name": "Sleepy Time","defaultWeight": 0.5, "weightOffset": 400},
+        {"name": "Fall Deep","defaultWeight": 0.5, "weightOffset": 400},
+        {"name": "Just Read Listen Obey","defaultWeight": 0.5, "weightOffset": 400},
+        {"name": "So Horny","defaultWeight": 0.5, "weightOffset": 500},
+        {"name": "So Depraved","defaultWeight": 0.5, "weightOffset": 500},
+        {"name": "Feeling so Desperate and Horny","defaultWeight": 0.5, "weightOffset": 250},
+        {"name": "Always Obedient Always Submissive Always Deeply in trance","defaultWeight": 0.5, "weightOffset": 300},
+        {"name": "Fall into Deep sleep and Submission","defaultWeight": 0.5, "weightOffset": 250},
+        {"name": "So desperate to Serve so Desperate to Obey","defaultWeight": 0.5, "weightOffset": 400},
+        {"name": "So nice to Fall Deep into Obedient Bliss","defaultWeight": 0.5, "weightOffset": 150},
+        {"name": "Comfortable and Relaxed in a Deep Trance","defaultWeight": 0.5, "weightOffset": 750},
+        {"name": "Freeze for a minute!","defaultWeight": 0.5, "weightOffset": 750},
+        {"name": "Freeze for 30 Seconds","defaultWeight": 0.5, "weightOffset": 750},
+        {"name": "Pose like a mannequin for me","defaultWeight": 0.5, "weightOffset": 750},
+        {"name": "Unfreeze","defaultWeight": 0.5, "weightOffset": 800},
+        {"name": "touch","defaultWeight": 0.5, "weightOffset": 500},
+        {"name": "stop touching","defaultWeight": 0.5, "weightOffset": 550},
+        {"name": "orgasm your mind away and stop touching!","defaultWeight": 0.5, "weightOffset": 200},
+        {"name": "remove one article of clothing!","defaultWeight": 0.5, "weightOffset": 500},
+        {"name": "remove two articles of clothing!","defaultWeight": 0.5, "weightOffset": 400},
+        {"name": "remove three articles of clothing!","defaultWeight": 0.5, "weightOffset": 300},
+        {"name": "Strip Naked!","defaultWeight": 0.5, "weightOffset": 250},
+        {"name": "Dance like a Stripper, for 30 seconds!","defaultWeight": 0.5, "weightOffset": 400},
+        {"name": "Blow us a Kiss!","defaultWeight": 0.5, "weightOffset": 750},
+        {"name": "Giggle!","defaultWeight": 0.5, "weightOffset": 500},
+
+        {"name": "If you are a girl, Become a busty, Sex Obsessed Bimbo, if youre a boy, Become a Stupidly Kind, Sex Obsessed Himbo","defaultWeight": 0.5, "weightOffset": 100},
+        {"name": "If you are a girl, Become an Intelligent, Nedy Book Girl, if youre a boy, Become a Shy, Nerdy Math Boy","defaultWeight": 0.5, "weightOffset": 100},
+        {"name": "If you are a girl, Become a Cutesy, Bouncy Cat-Girl, if youre a boy, Become a Pretty, UwU CatBoy","defaultWeight": 0.5, "weightOffset": 100},
+        {"name": "Take A Selfie, Don't send it anywhere, Save it for a Rainy Day!","defaultWeight": 0.5, "weightOffset": 300}
+    ]
+}
