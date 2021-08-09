@@ -1,35 +1,51 @@
 print("ALPHA")
-from hashlib import new
 import discord, time, random, asyncio, json, pprint
+import numpy, math
+from constants import *
 from datetime import datetime
+from hashlib import new
+from itertools import cycle
+from numpy.lib.function_base import delete
 
-import numpy
 intents = discord.Intents.default()
 intents.reactions = True
-
-from itertools import cycle
-from discord import channel
-from discord import *
-from numpy.lib.function_base import delete
+intents.members = True
 client = discord.Client(intents = intents)
 loaded = False
 
-
-# with open("C:/Users/embo/3D Objects/lol/discordBot/token.txt") as f:
-#     token = f.readlines()[0].split(' , ')[0]
-#     print(token)
-
-token = "dm me!"
-
-commandPrefix = "$"
-
 class Command:
-    def __init__(self, name, defaultWeight, weightOffset, totalWeight):
+    def __init__(self, name, defaultWeight, weightOffset):
         self.name = name
         self.defaultWeight = defaultWeight
         self.weightOffset = weightOffset
-        self.totalWeight = totalWeight
+    
+    def __str__(self):
+        return self.name
+    
+    async def sendToChannel(self, channel):
+        await channel.send(self.name)
+    
+    def resetWeight(self):
+        self.weightOffset = 0
+    
+    def increaseWeight(self):
+        self.weightOffset += math.floor(self.defaultWeight/10)
+        
+    def saveToJSON(self, file, isLast):
+        file.write("\t\t{\"name\": \"" + self.name + "\",\"defaultWeight\": " + str(self.defaultWeight) + ",\"weightOffset\": " + str(self.weightOffset) + "}")
+        if not isLast:
+            file.write(",")
+        file.write("\n")
 
+def saveCommands(comArray, filename):
+    file = open(filename, "w")
+    file.write("{\n")
+    file.write("\t\"commands\": [\n")
+    cursor = 0
+    for command in comArray:
+        cursor += 1
+        command.saveToJSON(file, True if cursor == len(comArray) else False)
+    file.write("\t]\n}")
 
 def jsonReload():
     print('jsonReload')
@@ -40,8 +56,7 @@ def jsonReload():
         commandJson = data['commands']
         for command in commandJson:
             print(str(command))
-            # commandList.append(Command(command['name'], command['defaultWeight'], random.randrange(-100, 100), 0))
-            commandList.append(Command(command['name'], command['defaultWeight'], command['weightOffset'], 0))
+            commandList.append(Command(command['name'], command['defaultWeight'], command['weightOffset']))
 
     print('')
     print('Getting attributes from parsed commands')
@@ -53,7 +68,6 @@ def jsonReload():
         print("name:",cmd.name)
         print("defaultWeight:",cmd.defaultWeight)
         print("weightOffset:",cmd.weightOffset)
-        print("totalWeight:",cmd.totalWeight)
     
     return commandList
 
@@ -78,8 +92,8 @@ def weightedChoice(comArray):
     print("ERROR : NO VALID COMMAND FOUND.")
     raise ValueError
 
-#####
-
+###### OLD CODE FOR HISTORY PURPOSES. ################################
+#
 # def selectCommand(cmdList):
 #     heaviestCmd = 0
 #     print('selectCommand')
@@ -92,37 +106,19 @@ def weightedChoice(comArray):
 #         cmdWeights.append(cmd.totalWeight)
 #         if(cmd.totalWeight < heaviestCmd):
 #             print(cmd.name)
-
+#
 #     print("--chosen--")
 #     samples = numpy.random.choice(cmdList, 1, True, cmdWeights)
 #     print(samples)
 #     print(type(samples))
 #     print(samples[0].name)
-
-
-
-commandTimeRangeMin = 10
-commandTimeRangeMax = 50
-
-
-
-botChannel = client.get_channel(873302790376669236)
-print('just assigned botChannel, type is:',type(botChannel))
-commandChannel = client.get_channel(873251206984790079)
-
-lastMessagingUser = client.get_user(863593714600771605)
-orderFile = "orders.txt"
-
-jobs = jsonReload()
-
-print(weightedChoice(jobs))    
-
-# selectCommand(jobs)
+#
+######################################################################
 
 async def sendCommand():
 
-    botChannel = client.get_channel(873302790376669236)
-    commandChannel = client.get_channel(873251206984790079)
+    global jobs
+    global lastMessagingUser
 
     print("comamndMe")
     orders = jobs
@@ -132,35 +128,33 @@ async def sendCommand():
     # while(client.is_closed()):
     while(not client.is_closed()):
         if(len(orders) >= 10):
-            inSendLoop = True
             # await reload()
             print("while not client.is_closed:")
             currentOrder = weightedChoice(orders)
+            for order in orders:
+                order.increaseWeight()
+            currentOrder.resetWeight()
             print("currentOrder = orders[random.randrange(0, orders.len())]")
             print(client.user)
             print(lastMessagingUser)
             if(lastMessagingUser is not client.user):
                 print("await commandChannel.send(currentOrder)")
-                await commandChannel.send(currentOrder.name)
+                await currentOrder.sendToChannel(commandChannel)
             else:
                 print("last messagign user was the bot, skipping rollout so as not to spam")
         else:
-            inSendLoop = False
             await commandChannel.send("Not enough commands in list! There must be at least 10, and there is currently {0} commands.".format(len(orders)))
-        sleepRange = random.randrange(commandTimeRangeMin, commandTimeRangeMax)
+        sleepRange = random.randrange(COMMAND_TIME_RANGE_MIN, COMMAND_TIME_RANGE_MAX)
         print("sleeping for " + str(sleepRange))
         await asyncio.sleep(sleepRange)
         print("await asyncio.sleep(random.randrange(1,2))")
 
-timedDrop = client.loop.create_task(sendCommand())
-
 async def reload():
-    botChannel = client.get_channel(873302790376669236)
+    botChannel = client.get_channel(BOT_CHANNEL_ID)
     print('just fucking assigned botChannel, type is:',type(botChannel))
-    commandChannel = client.get_channel(873251206984790079)
+    commandChannel = client.get_channel(COMMAND_CHANNEL_ID)
 
     orderFile = "orders.txt"
-
 
     with open(orderFile) as f:
         jobs = f.readlines()
@@ -173,76 +167,111 @@ async def reload():
         for order in jobs:
             print("order, type:",type(order))
             print("type(botChannel): ",type(botChannel))
-            await botChannel.send(order)
+            await order.sendToChannel(botChannel)
             time.sleep(0.1)
     
-    await botChannel.send("Loaded Assets, Ready to rule!")
-    await botChannel.send("Command Count: " + str(len(jobs)))
-
+    #await botChannel.send("Loaded Assets, Ready to rule!")
+    #await botChannel.send("Command Count: " + str(len(jobs)))
 
 @client.event
 async def on_ready():
-    print("we have logged in as {0.user}".format(client))
-    await reload()
+    global lastMessagingUser
+    global botChannel
+    global commandChannel
     
+    lastMessagingUser = client.get_user(BOT_USER_ID)
+    print("lastMessagingUser.name : ",lastMessagingUser.name)
+    
+    botChannel = client.get_channel(BOT_CHANNEL_ID)
+    print('just assigned botChannel, type is:',type(botChannel))
+    commandChannel = client.get_channel(COMMAND_CHANNEL_ID)
+    
+    print("we have logged in as {0.user}".format(client))
+    await reload()    
+
+@client.event
+async def on_member_join(member):
+    if member.dm_channel == None:
+        channel = await member.create_dm()
+    else:
+        channel = member.dm_channel
+    await channel.send("HALLO! If you receive this message, well it means you arrived while someone was testing me. No problem though, have fun!")
 
 @client.event
 async def on_message(message):
+    global lastMessagingUser
+    global jobs
+    
     lastMessagingUser = message.author
     print("{1} : {0.channel} : {0.author.name}:  {0.content}".format(message,datetime.now().strftime("%H-%M-%S")))
     if(message.author == client.user):
         return # ignore bot's messages
     
-    elif(message.content.startswith(commandPrefix + "hello")):
+    elif(message.content.startswith(COMMAND_PREFIX + "hello")):
         await message.channel.send("yo yo yooo, hi there {0.author.name}".format(message))
-    elif(message.content.startswith(commandPrefix + "reload")):
+    elif(message.content.startswith(COMMAND_PREFIX + "reload")):
 
         print("reload")
         loaded = False
         print("we have logged in as {0.user}".format(client))
         await reload()
-    elif(message.content.startswith(commandPrefix + "commandMe")):
+    elif(message.content.startswith(COMMAND_PREFIX + "commandMe")):
         await sendCommand()
-    elif(message.content.startswith(commandPrefix + "linkChannel")):
+    elif(message.content.startswith(COMMAND_PREFIX + "linkChannel")):
         if(message.content.split(' ')[1] == "bot"):
             botChannel = message.channel
             await botChannel.send("Linked botChannel to " + str(message.channel))
         elif(message.content.split(' ')[1] == "commands"):
             commandChannel = message.channel
             await commandChannel.send("Linked CommandChannel to " + str(message.channel))
-    elif(message.content.startswith(commandPrefix + "commandCount")):
+    elif(message.content.startswith(COMMAND_PREFIX + "commandCount")):
         await reload()
-    elif(message.content.startswith(commandPrefix + "addCommand")):
+    elif(message.content.startswith(COMMAND_PREFIX + "addCommand")):
+        if message.author.id in ELEVATED_MEMBERS:
+            args = message.content.split(" ")[1:]
+            if args[0].isdecimal():
+                jobs.append(Command(" ".join(args[1:]), int(args[0]), 0))
+                saveCommands(jobs, ORDER_FILE)
+                text = "Yay a new command!"
+                embed = None
+            else:
+                text = None
+                embed = discord.Embed(colour=discord.Colour.red())
+                embed.add_field(name="Error", value="The first value needs to be the command's weight. In other words, a number.")
+        await message.channel.send(content = text, embed = embed)
+#############################################OLD CODE##############################################
+#        print("getting old jobs")
+#        with open(orderFile, "r") as f:
+#            jobs = f.readlines()
+#            # you may also want to remove whitespace characters like `\n` at the end of each line
+#            jobs = [x.strip("\n") for x in jobs] 
+#            f.close()
+#        print("got old jobs")
+#        
+#        with open(orderFile, "a") as f:
+#            newCommand = message.content.split(" ", 0)
+#            print("Sanitizing Command")
+#            print(newCommand)
+#
+#            newCommand = newCommand[(len(newCommand)-1)]
+#            print("newCommand = newCommand[(len(newCommand)-1)]")
+#            print(newCommand)
+#
+#            prefix = "$addCommand"
+#            print("before removing prefix")
+#            print(newCommand)
+#            newCommand = newCommand.split(" ", 1)
+#            newCommand = newCommand[1]
+#            print("after removing prefix")
+#            print(newCommand)
+#            print("command Data Sanitation Complete")
+#            f.write(str("\n" + str(newCommand)))
+#            f.close()
+#            await reload()
+#            await message.channel.send(str("Added Command \"") + str(newCommand) + str("\""))
+####################################################################################################
 
-        print("getting old jobs")
-        with open(orderFile, "r") as f:
-            jobs = f.readlines()
-            # you may also want to remove whitespace characters like `\n` at the end of each line
-            jobs = [x.strip("\n") for x in jobs] 
-            f.close()
-        print("got old jobs")
-        with open(orderFile, "a") as f:
-            newCommand = message.content.split(" ", 0)
-            print("Sanitizing Command")
-            print(newCommand)
-
-            newCommand = newCommand[(len(newCommand)-1)]
-            print("newCommand = newCommand[(len(newCommand)-1)]")
-            print(newCommand)
-
-            prefix = "$addCommand"
-            print("before removing prefix")
-            print(newCommand)
-            newCommand = newCommand.split(" ", 1)
-            newCommand = newCommand[1]
-            print("after removing prefix")
-            print(newCommand)
-            print("command Data Sanitation Complete")
-            f.write(str("\n" + str(newCommand)))
-            f.close()
-            await reload()
-            await message.channel.send(str("Added Command \"") + str(newCommand) + str("\""))
-    elif(message.content.startswith(commandPrefix + "listCommands")):
+    elif(message.content.startswith(COMMAND_PREFIX + "listCommands")):
         with open(orderFile, "r") as f:
             jobs = f.readlines()
             # you may also want to remove whitespace characters like `\n` at the end of each line
@@ -263,7 +292,7 @@ async def on_message(message):
             else:
                 await message.channel.send(jobList)
                 await message.channel.send("Command Count: " + str(len(jobs)))
-    elif(message.content.startswith(commandPrefix + "clearCommands")):  
+    elif(message.content.startswith(COMMAND_PREFIX + "clearCommands")):  
         if(message.content.endswith("LMAONADE")):
             msg = message.content
             await message.delete()
@@ -284,31 +313,54 @@ async def on_message(message):
             await message.channel.send(str("Cleared All Commands"))
         else:
             await message.channel.send("Error: Incorrect Password, Admins Only...")
-    elif(message.content.startswith(commandPrefix + "config")):
+    elif(message.content.startswith(COMMAND_PREFIX + "config")):
         sanTemp = message.content.split(' ')
-        commandTimeRangeMin = int(sanTemp[1])
-        commandTimeRangeMax = int(sanTemp[2])
-        await message.channel.send("Set commandTimeRangeMin to {0}, commandTimeRangeMax to {1}".format(int(sanTemp[1]),int(sanTemp[2])))
-        print(str(commandTimeRangeMin) + " - " + str(commandTimeRangeMax))
+        COMMAND_TIME_RANGE_MIN = int(sanTemp[1])
+        COMMAND_TIME_RANGE_MAX = int(sanTemp[2])
+        await message.channel.send("Set COMMAND_TIME_RANGE_MIN to {0}, COMMAND_TIME_RANGE_MAX to {1}".format(int(sanTemp[1]),int(sanTemp[2])))
+        print(str(COMMAND_TIME_RANGE_MIN) + " - " + str(COMMAND_TIME_RANGE_MAX))
 
-    elif(message.content.startswith(commandPrefix + "startLoop")):
+    elif(message.content.startswith(COMMAND_PREFIX + "startLoop")):
         timedDrop = client.loop.create_task(sendCommand())
         await message.channel.send("Starting Semi-Randomly Timed Dropping of Commands")
     
-    # elif(message.content.startswith(commandPrefix + "stopLoop")):
+    # elif(message.content.startswith(COMMAND_PREFIX + "stopLoop")):
         
     #     # timedDrop.cancel()
     #     await message.channel.send("Stopped Semi-Randomly Timed Dropping of Commands")
     #     await message.channel.send("didn't actually, this is broken atm, @ emily so she can turn it off manually")
 
-    elif(message.content.startswith(commandPrefix + "")):
+    elif(message.content.startswith(COMMAND_PREFIX + "goodbye")):
+        if message.author.id in ELEVATED_MEMBERS:
+            saveCommands(jobs, ORDER_FILE)
+            await client.close()
+        else:
+            message.channel.send("Error: Incorrect Password, Admins Only...")
+
+    elif(message.content.startswith(COMMAND_PREFIX + "")):
         print("unknown command")
         await message.channel.send("Unknown BotCommand!")
 
 @client.event
 async def on_reaction_add(reaction, user):
-    print(user.name + ": added reaction " + reaction + " to message " + reaction.message)
+    print(user.name + ": added reaction " + reaction.emoji + " to message " + reaction.message)
 
 
+jobs = jsonReload()
+orderFile = "orders.txt"
+lastMessagingUser = None
+botChannel = None
+commandChannel = None
 
+fd = open("private/token.txt")
+token = fd.readlines()[0]
+print(token)
+fd.close()
 client.run(token)
+
+print(weightedChoice(jobs))    
+
+# selectCommand(jobs)
+
+#timedDrop = client.loop.create_task(sendCommand())
+
