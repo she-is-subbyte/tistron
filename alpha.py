@@ -1,5 +1,5 @@
 print("ALPHA")
-import discord, time, random, asyncio, json, pprint
+import discord, time, random, asyncio, json, pprint, os
 import numpy, math
 from constants import *
 from datetime import datetime
@@ -12,6 +12,8 @@ intents.reactions = True
 intents.members = True
 client = discord.Client(intents = intents)
 loaded = False
+
+path = str(os.getcwd() + '\\tistron\\')
 
 class Command:
     def __init__(self, name, defaultWeight, weightOffset):
@@ -50,7 +52,7 @@ def saveCommands(comArray, filename):
 def jsonReload():
     print('jsonReload')
     commandList = []
-    with open('orders - Backup.json') as f:
+    with open(path + 'orders - Backup.json') as f:
         data = json.load(f)
         commandJson = []
         commandJson = data['commands']
@@ -154,7 +156,7 @@ async def reload():
     print('just fucking assigned botChannel, type is:',type(botChannel))
     commandChannel = client.get_channel(COMMAND_CHANNEL_ID)
 
-    orderFile = "orders.txt"
+    orderFile = path+"orders.txt"
 
     with open(orderFile) as f:
         jobs = f.readlines()
@@ -173,6 +175,8 @@ async def reload():
     #await botChannel.send("Loaded Assets, Ready to rule!")
     #await botChannel.send("Command Count: " + str(len(jobs)))
 
+
+##### ON READY #####
 @client.event
 async def on_ready():
     global lastMessagingUser
@@ -188,7 +192,15 @@ async def on_ready():
     
     print("we have logged in as {0.user}".format(client))
     await reload()    
+    print("ready")
 
+
+#####   ON TYPING   #####
+@client.event
+async def on_typing(channel, user, when):
+    print("     -     ",user,"is typing in",channel,"at",when)
+
+#####   ON JOIN DM   #####
 @client.event
 async def on_member_join(member):
     if member.dm_channel == None:
@@ -197,6 +209,7 @@ async def on_member_join(member):
         channel = member.dm_channel
     await channel.send("HALLO! If you receive this message, well it means you arrived while someone was testing me. No problem though, have fun!")
 
+##### ON MESSAGE #####
 @client.event
 async def on_message(message):
     global lastMessagingUser
@@ -352,7 +365,7 @@ lastMessagingUser = None
 botChannel = None
 commandChannel = None
 
-fd = open("private/token.txt")
+fd = open(path+"private/token.txt")
 token = fd.readlines()[0]
 print(token)
 fd.close()
