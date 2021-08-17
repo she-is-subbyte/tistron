@@ -1,5 +1,5 @@
 print("ALPHA")
-import discord, time, random, asyncio, json, pprint, os
+import discord, time, random, asyncio, json, pprint, os, emojis
 import numpy, math
 from constants import *
 from datetime import datetime
@@ -13,19 +13,54 @@ intents.members = True
 client = discord.Client(intents = intents)
 loaded = False
 
-path = str(os.getcwd() + '\\tistron\\')
+path = str(os.getcwd() + '\\')
 
 class Command:
     def __init__(self, name, defaultWeight, weightOffset):
         self.name = name
         self.defaultWeight = defaultWeight
         self.weightOffset = weightOffset
+        self.timerMin = 0
+        self.timerMax = 0
+        self.text = None
     
     def __str__(self):
-        return self.name
+        return self.parse()
+    
+    # Parses the name, replacing various key strings with others.
+    # {%random(x,y)} is replaced by a random number between x and y inclusive
+    # {%timer(x,y,text) makes it so that when a timer comprised between x and y inclusive ends, text is sent.}
+    
+    def parse(self):
+        commands = self.name.split("{")
+        ret = ""
+        for command in commands:
+            if command.startswith("%random"):
+                dice1 = command.split("(")[1].split(",")[0]
+                dice2 = command.split("(")[1].split(",")[1].split(")")[0]
+                if dice1.isdigit() and dice2.isdigit():
+                    dice1 = int(dice1)
+                    dice2 = int(dice2)
+                    ret += str(random.randint(dice1, dice2)) 
+                    if len(command.split("}")) > 1:
+                        ret += "}".join(command.split("}")[1:])
+            elif command.startswith("%timer"):
+                self.text = ",".join(command.split("%timer(")[1].split(",")[2:]).split(")")[0]
+                timerMin = command.split("%timer(")[1].split(",")[0]
+                timerMax = command.split("%timer(")[1].split(",")[1]
+                if timerMin.isdigit() and timerMax.isdigit():
+                    timerMin = int(timerMin)
+                    timerMax = int(timerMax)
+                    self.timer = random.randint(timerMin, timerMax)
+            else:
+                ret += "{" + command
+        return ret
     
     async def sendToChannel(self, channel):
-        await channel.send(self.name)
+        await channel.send(self.parse())
+        if self.timer != 0 and self.text != None:
+            await asyncio.sleep(self.timer)
+            await channel.send(self.text)
     
     def resetWeight(self):
         self.weightOffset = 0
@@ -175,6 +210,25 @@ async def reload():
     #await botChannel.send("Loaded Assets, Ready to rule!")
     #await botChannel.send("Command Count: " + str(len(jobs)))
 
+def generate_emote_text(dic):
+    content = ""
+    for reaction in dic:
+        if type(reaction) is int: # If the key is an ID of a custom emoji...
+            emote = client.get_emoji(reaction)
+            role = botChannel.guild.get_role(dic[reaction])
+            content += str(emote) + " : " + role.name + "\n"
+        else:
+            role = botChannel.guild.get_role(dic[reaction])
+            content += emojis.encode(reaction) + " : " + role.name + "\n"
+    return content
+
+async def generate_role_reactions(message, dic):
+    for reaction in dic:
+        if type(reaction) is int:
+            emote = client.get_emoji(reaction)
+            await message.add_reaction(emote)
+        else:
+            await message.add_reaction(emojis.encode(reaction))
 
 ##### ON READY #####
 @client.event
@@ -191,7 +245,54 @@ async def on_ready():
     commandChannel = client.get_channel(COMMAND_CHANNEL_ID)
     
     print("we have logged in as {0.user}".format(client))
-    await reload()    
+    await reload()
+    # If the role channels doesn't have any messages yet, create them.
+    roleChannel = client.get_channel(ROLE_CHANNEL_ID)
+    history = await roleChannel.history(limit=3).flatten()
+    if len(history) == 0:
+        await roleChannel.send("Heyyy all! Here in Tistron Hub, we use an automated system for role attribution! You just need to react using the corresponding emoji and if I'm available (I'm busy you know!), I'll add the role for you.\n\n**I REPEAT : IF I AM DISCONNECTED, THIS WILL NOT WORK. CHECK THE SIDEBAR TO SEE IF I'M CONNECTED OR NOT.**\n\nOr better yet, just say " + COMMAND_PREFIX + "hello and I'll confirm you I'm here! If you accidentaly react while I'm not here, no problem! Just remove the reaction, and set it again when I'm available!\n\nOf course, all of this is perfectly optionnal, it is just so we can get to know each other better, but don't feel obligated to add yourself any role you don't want to!")
+        with open("constants.py", "a") as f:
+            await asyncio.sleep(1)
+            content = "**Gender**\n\nThis one is to add a role representing your gender(s).\n\n"
+            content += generate_emote_text(ROLE_REACTIONS_GENDER)
+            message = await roleChannel.send(content)
+            f.write("\nROLE_GENDER_MESSAGE_ID = " + str(message.id) + "\n")
+            await generate_role_reactions(message, ROLE_REACTIONS_GENDER)
+            
+            await asyncio.sleep(1)
+            content = "**Pronouns**\n\nThese are the pronouns you want us to use for you! If you use multiple pronouns don't hesitate to add multiple roles\n\n*Small rule reminder : Misgendering on purpose is NOT OKAY.*\n\n"
+            content += generate_emote_text(ROLE_REACTIONS_PRONOUNS)
+            message = await roleChannel.send(content)
+            f.write("\nROLE_PRONOUNS_MESSAGE_ID = " + str(message.id) + "\n")
+            await generate_role_reactions(message, ROLE_REACTIONS_PRONOUNS)
+            
+            await asyncio.sleep(1)
+            content = "**Localization**\n\nThis one has a more technical purpose, it's always useful to know someone's approximate timezone so we know wether it's night or work time for them.\n\n"
+            content += generate_emote_text(ROLE_REACTIONS_LOCALIZATION)
+            message = await roleChannel.send(content)
+            f.write("\nROLE_LOCALIZATION_MESSAGE_ID = " + str(message.id) + "\n")
+            await generate_role_reactions(message, ROLE_REACTIONS_LOCALIZATION)
+            
+            await asyncio.sleep(1)
+            content = "**Hypnosis status**\n\nThis one has roles related to either the roles you want to play, or your experience with hypnosis\n\n"
+            content += generate_emote_text(ROLE_REACTIONS_HYPNOSIS)
+            message = await roleChannel.send(content)
+            f.write("\nROLE_HYPNOSIS_MESSAGE_ID = " + str(message.id) + "\n")
+            await generate_role_reactions(message, ROLE_REACTIONS_HYPNOSIS)
+            
+            await asyncio.sleep(1)
+            content = "**DMs**\n\nDo you want others to know they can DM you whenever? Or that you'd rather not be spammed? Or only for roleplay maybe?\n\n"
+            content += generate_emote_text(ROLE_REACTIONS_DMS)
+            message = await roleChannel.send(content)
+            f.write("\nROLE_DMS_MESSAGE_ID = " + str(message.id) + "\n")
+            await generate_role_reactions(message, ROLE_REACTIONS_DMS)
+            
+            await asyncio.sleep(1)
+            content = "**Relationship status**\n\nTell the world how desperately you need someone in your life, or how you have a partner (or multiple partners!) you love very very much!\n\n"
+            content += generate_emote_text(ROLE_REACTIONS_RELATIONSHIPS)
+            message = await roleChannel.send(content)
+            f.write("\nROLE_RELATIONSHIP_MESSAGE_ID = " + str(message.id) + "\n")
+            await generate_role_reactions(message, ROLE_REACTIONS_RELATIONSHIPS)
     print("ready")
 
 
@@ -356,14 +457,40 @@ async def on_message(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-    print(user.name + ": added reaction " + reaction.emoji + " to message " + reaction.message)
+    print(user.name + ": added reaction " + reaction.emoji + " to message " + reaction.message.content)
 
+@client.event
+async def on_raw_reaction_add(payload):
+    print(emojis.decode(payload.emoji))
+    print(payload.emoji.name)
+    reacManager = {ROLE_GENDER_MESSAGE_ID: ROLE_REACTIONS_GENDER, ROLE_PRONOUNS_MESSAGE_ID: ROLE_REACTIONS_PRONOUNS, ROLE_LOCALIZATION_MESSAGE_ID: ROLE_REACTIONS_LOCALIZATION, ROLE_HYPNOSIS_MESSAGE_ID: ROLE_REACTIONS_HYPNOSIS, ROLE_DMS_MESSAGE_ID: ROLE_REACTIONS_DMS, ROLE_RELATIONSHIP_MESSAGE_ID: ROLE_REACTIONS_RELATIONSHIPS}
+    if payload.message_id in reacManager.keys():
+        reactions = reacManager[payload.message_id]
+        for emote in reactions:
+            if payload.emoji.id == emote or payload.emoji.name == emote:
+                sender = client.get_user(payload.user_id)
+                server = client.get_guild(payload.guild_id)
+                member = server.get_member(sender.id)
+                await member.add_role(reactions[emote])
+
+@client.event
+async def on_raw_reaction_remove(payload):
+    reacManager = {ROLE_GENDER_MESSAGE_ID: ROLE_REACTIONS_GENDER, ROLE_PRONOUNS_MESSAGE_ID: ROLE_REACTIONS_PRONOUNS, ROLE_LOCALIZATION_MESSAGE_ID: ROLE_REACTIONS_LOCALIZATION, ROLE_HYPNOSIS_MESSAGE_ID: ROLE_REACTIONS_HYPNOSIS, ROLE_DMS_MESSAGE_ID: ROLE_REACTIONS_DMS, ROLE_RELATIONSHIP_MESSAGE_ID: ROLE_REACTIONS_RELATIONSHIPS}
+    if payload.message_id in reacManager.keys():
+        reactions = reacManager[payload.message_id]
+        for emote in reactions:
+            if payload.emoji.id == emote or payload.emoji.name == emote:
+                sender = client.get_user(payload.user_id)
+                server = client.get_guild(payload.guild_id)
+                member = server.get_member(sender.id)
+                await member.remove_role(reactions[emote])
 
 jobs = jsonReload()
 orderFile = "orders.txt"
 lastMessagingUser = None
 botChannel = None
 commandChannel = None
+activated = False
 
 fd = open(path+"private/token.txt")
 token = fd.readlines()[0]
@@ -376,4 +503,3 @@ print(weightedChoice(jobs))
 # selectCommand(jobs)
 
 #timedDrop = client.loop.create_task(sendCommand())
-
