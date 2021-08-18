@@ -1,6 +1,6 @@
 {
 	"commands": [
-		{"name": "smile!","defaultWeight": 500,"weightOffset": 0},
+		{"name": "Smile!","defaultWeight": 500,"weightOffset": 0},
 		{"name": "Obey","defaultWeight": 500,"weightOffset": 0},
 		{"name": "Sleepy Time","defaultWeight": 500,"weightOffset": 0},
 		{"name": "Fall Deep","defaultWeight": 400,"weightOffset": 0},
@@ -15,17 +15,18 @@
 		{"name": "Comfortable and Relaxed in a Deep Trance","defaultWeight": 750,"weightOffset": 0},
 		{"name": "Freeze for {%timer(30,75,Unfreeze)} seconds!}","defaultWeight": 750,"weightOffset": 0},
 		{"name": "Pose like a mannequin for me","defaultWeight": 750,"weightOffset": 0},
-		{"name": "touch","defaultWeight": 500,"weightOffset": 0},
-		{"name": "stop touching","defaultWeight": 550,"weightOffset": 0},
-		{"name": "orgasm your mind away and stop touching!","defaultWeight": 200,"weightOffset": 0},
-		{"name": "remove (%random(1,3)) article of clothing!","defaultWeight": 500,"weightOffset": 0},
+		{"name": "Touch yourself","defaultWeight": 500,"weightOffset": 0},
+		{"name": "stop touching yourself","defaultWeight": 550,"weightOffset": 0},
+		{"name": "Orgasm your mind away and stop touching!","defaultWeight": 200,"weightOffset": 0},
+		{"name": "Remove (%random(1,3)) article of clothing!","defaultWeight": 500,"weightOffset": 0},
 		{"name": "Strip Naked!","defaultWeight": 250,"weightOffset": 0},
 		{"name": "Dance like a Stripper, for 30 seconds!","defaultWeight": 400,"weightOffset": 0},
 		{"name": "Blow us a Kiss!","defaultWeight": 750,"weightOffset": 0},
 		{"name": "Giggle!","defaultWeight": 500,"weightOffset": 0},
 		{"name": "If you are a girl, Become a busty, Sex Obsessed Bimbo, if youre a boy, Become a Stupidly Kind, Sex Obsessed Himbo","defaultWeight": 100,"weightOffset": 0},
-		{"name": "If you are a girl, Become an Intelligent, Nedy Book Girl, if youre a boy, Become a Shy, Nerdy Math Boy","defaultWeight": 100,"weightOffset": 0},
+		{"name": "If you are a girl, Become an Intelligent, Nerdy Book Girl, if youre a boy, Become a Shy, Nerdy Math Boy","defaultWeight": 100,"weightOffset": 0},
 		{"name": "If you are a girl, Become a Cutesy, Bouncy Cat-Girl, if youre a boy, Become a Pretty, UwU CatBoy","defaultWeight": 100,"weightOffset": 0},
-		{"name": "Take A Selfie, Don't send it anywhere, Save it for a Rainy Day!","defaultWeight": 300,"weightOffset": 0}
+		{"name": "Take A Selfie, Don't send it anywhere, Save it for a Rainy Day!","defaultWeight": 300,"weightOffset": 0},
+		{"name": "Do {%random(2, 10)} push-ups","defaultWeight":200,"weightOffset":0}
 	]
 }

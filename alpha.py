@@ -13,7 +13,7 @@ intents.members = True
 client = discord.Client(intents = intents)
 loaded = False
 
-path = str(os.getcwd() + '\\')
+path = str(os.getcwd() + '\\tistron\\')
 
 class Command:
     def __init__(self, name, defaultWeight, weightOffset):
@@ -461,17 +461,24 @@ async def on_reaction_add(reaction, user):
 
 @client.event
 async def on_raw_reaction_add(payload):
-    print(emojis.decode(payload.emoji))
-    print(payload.emoji.name)
     reacManager = {ROLE_GENDER_MESSAGE_ID: ROLE_REACTIONS_GENDER, ROLE_PRONOUNS_MESSAGE_ID: ROLE_REACTIONS_PRONOUNS, ROLE_LOCALIZATION_MESSAGE_ID: ROLE_REACTIONS_LOCALIZATION, ROLE_HYPNOSIS_MESSAGE_ID: ROLE_REACTIONS_HYPNOSIS, ROLE_DMS_MESSAGE_ID: ROLE_REACTIONS_DMS, ROLE_RELATIONSHIP_MESSAGE_ID: ROLE_REACTIONS_RELATIONSHIPS}
     if payload.message_id in reacManager.keys():
         reactions = reacManager[payload.message_id]
         for emote in reactions:
-            if payload.emoji.id == emote or payload.emoji.name == emote:
+            if type(emote) is int:
+                if payload.emoji.id == emote:
+                    sender = client.get_user(payload.user_id)
+                    server = client.get_guild(payload.guild_id)
+                    member = server.get_member(sender.id)
+                    await member.add_roles(client.get_guild(payload.guild_id).get_role(reactions[emote]))
+                    print("Added role " + client.get_guild(payload.guild_id).get_role(reactions[emote]).name)
+            elif payload.emoji.name == emojis.encode(emote):
                 sender = client.get_user(payload.user_id)
                 server = client.get_guild(payload.guild_id)
                 member = server.get_member(sender.id)
-                await member.add_role(reactions[emote])
+                await member.add_roles(client.get_guild(payload.guild_id).get_role(reactions[emote]))
+                print("Added role " + client.get_guild(payload.guild_id).get_role(reactions[emote]).name)
+  
 
 @client.event
 async def on_raw_reaction_remove(payload):
@@ -479,12 +486,20 @@ async def on_raw_reaction_remove(payload):
     if payload.message_id in reacManager.keys():
         reactions = reacManager[payload.message_id]
         for emote in reactions:
-            if payload.emoji.id == emote or payload.emoji.name == emote:
+            if type(emote) is int:
+                if payload.emoji.id == emote:
+                    sender = client.get_user(payload.user_id)
+                    server = client.get_guild(payload.guild_id)
+                    member = server.get_member(sender.id)
+                    await member.remove_roles(client.get_guild(payload.guild_id).get_role(reactions[emote]))
+                    print("Removed role " + client.get_guild(payload.guild_id).get_role(reactions[emote]).name)
+            elif payload.emoji.name == emojis.encode(emote):
                 sender = client.get_user(payload.user_id)
                 server = client.get_guild(payload.guild_id)
                 member = server.get_member(sender.id)
-                await member.remove_role(reactions[emote])
-
+                await member.remove_roles(client.get_guild(payload.guild_id).get_role(reactions[emote]))
+                print("Removed role " + client.get_guild(payload.guild_id).get_role(reactions[emote]).name)
+  
 jobs = jsonReload()
 orderFile = "orders.txt"
 lastMessagingUser = None
