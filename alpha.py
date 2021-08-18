@@ -52,6 +52,7 @@ class Command:
                     timerMin = int(timerMin)
                     timerMax = int(timerMax)
                     self.timer = random.randint(timerMin, timerMax)
+                ret += "}".join(command.split("}")[1:])
             else:
                 ret += "{" + command
         return ret
