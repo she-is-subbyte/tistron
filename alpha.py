@@ -13,15 +13,14 @@ intents.members = True
 client = discord.Client(intents = intents)
 loaded = False
 
-path = str(os.getcwd() + '\\tistron\\')
+path = str(os.getcwd() + '\\')
 
 class Command:
     def __init__(self, name, defaultWeight, weightOffset):
         self.name = name
         self.defaultWeight = defaultWeight
         self.weightOffset = weightOffset
-        self.timerMin = 0
-        self.timerMax = 0
+        self.timer = 0
         self.text = None
     
     def __str__(self):
@@ -32,12 +31,15 @@ class Command:
     # {%timer(x,y,text) makes it so that when a timer comprised between x and y inclusive ends, text is sent.}
     
     def parse(self):
+        print(self.name)
         commands = self.name.split("{")
         ret = ""
         for command in commands:
             if command.startswith("%random"):
                 dice1 = command.split("(")[1].split(",")[0]
                 dice2 = command.split("(")[1].split(",")[1].split(")")[0]
+                print("random dice1:" + dice1 + " isdigit : " + str(dice1.isdigit()))
+                print("random dice2:" + dice2 + " isdigit : " + str(dice2.isdigit()))
                 if dice1.isdigit() and dice2.isdigit():
                     dice1 = int(dice1)
                     dice2 = int(dice2)
@@ -48,13 +50,16 @@ class Command:
                 self.text = ",".join(command.split("%timer(")[1].split(",")[2:]).split(")")[0]
                 timerMin = command.split("%timer(")[1].split(",")[0]
                 timerMax = command.split("%timer(")[1].split(",")[1]
+                print("timer timer1:" + timerMin + " isdigit : " + str(timerMin.isdigit()))
+                print("timer timer2:" + timerMax + " isdigit : " + str(timerMax.isdigit()))
                 if timerMin.isdigit() and timerMax.isdigit():
                     timerMin = int(timerMin)
                     timerMax = int(timerMax)
                     self.timer = random.randint(timerMin, timerMax)
+                    ret += str(self.timer)
                 ret += "}".join(command.split("}")[1:])
             else:
-                ret += "{" + command
+                ret += ("{" if not self.name.startswith(command) else "") + command
         return ret
     
     async def sendToChannel(self, channel):
@@ -153,18 +158,24 @@ def weightedChoice(comArray):
 #
 ######################################################################
 
-async def sendCommand():
+async def sendCommand(once = False):
 
     global jobs
     global lastMessagingUser
+    global activate
+    global lastMessageIsCommand
 
     print("comamndMe")
     orders = jobs
     print("orders = cycle(jobs)")
     print(client.is_closed())
+    if not once:
+        await commandChannel.send("Starting Semi-Randomly Timed Dropping of Commands")
 
     # while(client.is_closed()):
     while(not client.is_closed()):
+        print("activate" + str(activate))
+        print("lastMessageIsCommand" + str(lastMessageIsCommand))
         if(len(orders) >= 10):
             # await reload()
             print("while not client.is_closed:")
@@ -175,7 +186,8 @@ async def sendCommand():
             print("currentOrder = orders[random.randrange(0, orders.len())]")
             print(client.user)
             print(lastMessagingUser)
-            if(lastMessagingUser is not client.user):
+            # if not lastMessageIsCommand and activate:
+            if activate:
                 print("await commandChannel.send(currentOrder)")
                 await currentOrder.sendToChannel(commandChannel)
             else:
@@ -183,6 +195,9 @@ async def sendCommand():
         else:
             await commandChannel.send("Not enough commands in list! There must be at least 10, and there is currently {0} commands.".format(len(orders)))
         sleepRange = random.randrange(COMMAND_TIME_RANGE_MIN, COMMAND_TIME_RANGE_MAX)
+        if once or not activate:
+            break
+        lastMessageIsCommand = False
         print("sleeping for " + str(sleepRange))
         await asyncio.sleep(sleepRange)
         print("await asyncio.sleep(random.randrange(1,2))")
@@ -316,8 +331,11 @@ async def on_member_join(member):
 async def on_message(message):
     global lastMessagingUser
     global jobs
+    global activate
+    global lastMessageIsCommand
     
     lastMessagingUser = message.author
+    lastMessageIsCommand = False
     print("{1} : {0.channel} : {0.author.name}:  {0.content}".format(message,datetime.now().strftime("%H-%M-%S")))
     if(message.author == client.user):
         return # ignore bot's messages
@@ -331,7 +349,7 @@ async def on_message(message):
         print("we have logged in as {0.user}".format(client))
         await reload()
     elif(message.content.startswith(COMMAND_PREFIX + "commandMe")):
-        await sendCommand()
+        await sendCommand(True)
     elif(message.content.startswith(COMMAND_PREFIX + "linkChannel")):
         if(message.content.split(' ')[1] == "bot"):
             botChannel = message.channel
@@ -436,14 +454,13 @@ async def on_message(message):
         print(str(COMMAND_TIME_RANGE_MIN) + " - " + str(COMMAND_TIME_RANGE_MAX))
 
     elif(message.content.startswith(COMMAND_PREFIX + "startLoop")):
-        timedDrop = client.loop.create_task(sendCommand())
-        await message.channel.send("Starting Semi-Randomly Timed Dropping of Commands")
-    
-    # elif(message.content.startswith(COMMAND_PREFIX + "stopLoop")):
+        activate = True
+        await sendCommand()
         
-    #     # timedDrop.cancel()
-    #     await message.channel.send("Stopped Semi-Randomly Timed Dropping of Commands")
-    #     await message.channel.send("didn't actually, this is broken atm, @ emily so she can turn it off manually")
+    
+    elif(message.content.startswith(COMMAND_PREFIX + "stopLoop")):
+        activate = False
+        await message.channel.send("Stopped Semi-Randomly Timed Dropping of Commands")
 
     elif(message.content.startswith(COMMAND_PREFIX + "goodbye")):
         if message.author.id in ELEVATED_MEMBERS:
@@ -506,7 +523,8 @@ orderFile = "orders.txt"
 lastMessagingUser = None
 botChannel = None
 commandChannel = None
-activated = False
+activate = True
+lastMessageIsCommand = False
 
 fd = open(path+"private/token.txt")
 token = fd.readlines()[0]
@@ -514,8 +532,4 @@ print(token)
 fd.close()
 client.run(token)
 
-print(weightedChoice(jobs))    
-
-# selectCommand(jobs)
-
-#timedDrop = client.loop.create_task(sendCommand())
+print(weightedChoice(jobs))
