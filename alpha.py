@@ -159,7 +159,6 @@ def weightedChoice(comArray):
 ######################################################################
 
 async def sendCommand(once = False):
-
     global jobs
     global lastMessagingUser
     global activate
@@ -171,7 +170,6 @@ async def sendCommand(once = False):
     print(client.is_closed())
     if not once:
         await commandChannel.send("Starting Semi-Randomly Timed Dropping of Commands")
-
     # while(client.is_closed()):
     while(not client.is_closed()):
         print("activate" + str(activate))
@@ -212,7 +210,7 @@ async def reload():
     with open(orderFile) as f:
         jobs = f.readlines()
         # you may also want to remove whitespace characters like `\n` at the end of each line
-        jobs = [x.strip("\n") for x in jobs] 
+        jobs = [x.strip("\n") for x in jobs]
         f.close()
 
     if(not True): # used for initial testing! if this is on, it will send each and every command to the bot channel
@@ -245,6 +243,67 @@ async def generate_role_reactions(message, dic):
             await message.add_reaction(emote)
         else:
             await message.add_reaction(emojis.encode(reaction))
+
+def saveJson(filename, content):
+    with open(filename, "w") as f:
+        f.write(str(content).replace('\'', '"'))
+
+async def sendInduction(script, user, stage):
+    with open(script, "r") as f:
+        started = False
+        for line in f.readlines():
+            with open("inductions.json", "r") as f:
+                data = json.load(f)
+                safeword = False
+                for induction in data["inductions"]:
+                    if induction["id"] == user.id:
+                        if induction["stage"] == -1:
+                            safeword = True
+                        break
+                if safeword:
+                    print("user safeworded")
+                    return
+            if line.startswith("==="):
+                if line.startswith("===END"):
+                    i = 0
+                    for i in range(len(data["inductions"])):
+                        if data["inductions"][i]["id"] == user.id:
+                            del data["inductions"][i]
+                            saveJson("inductions.json", data)
+                            return
+                        i += 1
+                elif not started and line == ("===" + str(stage) + "===\n"):
+                    started = True
+                elif started:
+                    newStage = int(line.split("===")[1])
+                    for induction in data["inductions"]:
+                        if induction["id"] == user.id:
+                            if induction["stage"] == -1:
+                                return
+                            induction["stage"] = newStage
+                            saveJson("inductions.json", data)
+                            await sendInduction(script, user, newStage)
+                            return
+            elif line.startswith("{") and started:
+                timeToSleep = float(line.split("{")[1].split(";")[0])
+                timeToType = float(line.split("{")[1].split("}")[0].split(";")[1])
+                await asyncio.sleep(timeToSleep)
+                async with user.dm_channel.typing():
+                    await asyncio.sleep(timeToType)
+                with open("inductions.json", "r") as f:
+                    data = json.load(f)
+                    safeword = False
+                    for induction in data["inductions"]:
+                        if induction["id"] == user.id:
+                            if induction["stage"] == -1:
+                                safeword = True
+                            break
+                    if safeword:
+                        print("user safeworded")
+                        return
+                await user.dm_channel.send(line.split("}")[1])
+            elif line.startswith("[") and started:
+                return
 
 ##### ON READY #####
 @client.event
@@ -286,28 +345,28 @@ async def on_ready():
             content = "**Localization**\n\nThis one has a more technical purpose, it's always useful to know someone's approximate timezone so we know wether it's night or work time for them.\n\n"
             content += generate_emote_text(ROLE_REACTIONS_LOCALIZATION)
             message = await roleChannel.send(content)
-            f.write("\nROLE_LOCALIZATION_MESSAGE_ID = " + str(message.id) + "\n")
+            f.write("ROLE_LOCALIZATION_MESSAGE_ID = " + str(message.id) + "\n")
             await generate_role_reactions(message, ROLE_REACTIONS_LOCALIZATION)
             
             await asyncio.sleep(1)
             content = "**Hypnosis status**\n\nThis one has roles related to either the roles you want to play, or your experience with hypnosis\n\n"
             content += generate_emote_text(ROLE_REACTIONS_HYPNOSIS)
             message = await roleChannel.send(content)
-            f.write("\nROLE_HYPNOSIS_MESSAGE_ID = " + str(message.id) + "\n")
+            f.write("ROLE_HYPNOSIS_MESSAGE_ID = " + str(message.id) + "\n")
             await generate_role_reactions(message, ROLE_REACTIONS_HYPNOSIS)
             
             await asyncio.sleep(1)
             content = "**DMs**\n\nDo you want others to know they can DM you whenever? Or that you'd rather not be spammed? Or only for roleplay maybe?\n\n"
             content += generate_emote_text(ROLE_REACTIONS_DMS)
             message = await roleChannel.send(content)
-            f.write("\nROLE_DMS_MESSAGE_ID = " + str(message.id) + "\n")
+            f.write("ROLE_DMS_MESSAGE_ID = " + str(message.id) + "\n")
             await generate_role_reactions(message, ROLE_REACTIONS_DMS)
             
             await asyncio.sleep(1)
             content = "**Relationship status**\n\nTell the world how desperately you need someone in your life, or how you have a partner (or multiple partners!) you love very very much!\n\n"
             content += generate_emote_text(ROLE_REACTIONS_RELATIONSHIPS)
             message = await roleChannel.send(content)
-            f.write("\nROLE_RELATIONSHIP_MESSAGE_ID = " + str(message.id) + "\n")
+            f.write("ROLE_RELATIONSHIP_MESSAGE_ID = " + str(message.id))
             await generate_role_reactions(message, ROLE_REACTIONS_RELATIONSHIPS)
     print("ready")
 
@@ -339,11 +398,11 @@ async def on_message(message):
     print("{1} : {0.channel} : {0.author.name}:  {0.content}".format(message,datetime.now().strftime("%H-%M-%S")))
     if(message.author == client.user):
         return # ignore bot's messages
-    
+
     elif(message.content.startswith(COMMAND_PREFIX + "hello")):
         await message.channel.send("yo yo yooo, hi there {0.author.name}".format(message))
-    elif(message.content.startswith(COMMAND_PREFIX + "reload")):
 
+    elif(message.content.startswith(COMMAND_PREFIX + "reload")):
         print("reload")
         loaded = False
         print("we have logged in as {0.user}".format(client))
@@ -456,7 +515,6 @@ async def on_message(message):
     elif(message.content.startswith(COMMAND_PREFIX + "startLoop")):
         activate = True
         await sendCommand()
-        
     
     elif(message.content.startswith(COMMAND_PREFIX + "stopLoop")):
         activate = False
@@ -469,9 +527,100 @@ async def on_message(message):
         else:
             message.channel.send("Error: Incorrect Password, Admins Only...")
 
-    elif(message.content.startswith(COMMAND_PREFIX + "")):
+    elif message.content.startswith(COMMAND_PREFIX + "startInduction"):
+        if message.channel.type == discord.ChannelType.private:
+            with open("inductions.json", "r+") as f:
+                data = json.load(f)
+                found = False
+                for induction in data["inductions"]:
+                    if induction["id"] == str(message.author.id):
+                        target = induction
+                        found = True
+                        break
+                if found:
+                    message.channel.send("You already have an induction in progress... If you've awoken or safeworded during said induction, please use $restartInduction to restart it.")
+                else:
+                    data["inductions"].append({"id": message.author.id, "script": "script.tis", "stage": 1})
+                    saveJson("inductions.json", data)
+                    await sendInduction("script.tis", message.author, 1)
+        else:
+            await message.channel.send("This command can only be started while in a private message channel")
+    
+    elif message.content.startswith(COMMAND_PREFIX + "restartInduction"):
+        if message.channel.type == discord.ChannelType.private:
+            with open("inductions.json", "r+") as f:
+                data = json.load(f)
+                found = False
+                for induction in data["inductions"]:
+                    if induction["id"] == str(message.author.id):
+                        target = induction
+                        found = True
+                        break
+                if not found:
+                    message.channel.send("You don't have an induction in progress... If you wish to start your induction, or because the previous one ended normally, use $startIndution.")
+                else:
+                    target["stage"] = 1
+                    saveJson("inductions.json", data)
+                    await sendInduction(target["script"], message.author, target["stage"])
+        else:
+            await message.channel.send("This command can only be started while in a private message channel")
+
+    elif(message.content.startswith(COMMAND_PREFIX)):
         print("unknown command")
         await message.channel.send("Unknown BotCommand!")
+    
+    elif(message.channel.type == discord.ChannelType.private): # Continues induction when there is something to type
+        answer = message.content.lower()
+        f = open("inductions.json", "r")
+        data = json.load(f)
+        f.close()
+        found = False
+        for induction in data["inductions"]:
+            if induction["id"] == message.author.id:
+                found = True
+                script = open(induction["script"], "r")
+                stage = induction["stage"]
+                if answer == "red":
+                    induction["stage"] = -1
+                    saveJson("inductions.json", data)
+                    await message.channel.send("Alright, on 3 you will instantly wake up")
+                    await asyncio.sleep(2)
+                    await message.channel.send("1")
+                    await asyncio.sleep(1)
+                    await message.channel.send("2")
+                    await asyncio.sleep(1)
+                    await message.channel.send("3")
+                    await asyncio.sleep(1)
+                    await message.channel.send("Wake now")
+                    return
+                break
+        if found:
+            stageFound = False
+            for line in script.readlines():
+                if line.startswith("===" + str(stage) + "===\n"):
+                    stageFound = True
+                elif stageFound:
+                    choiceLine = line.lower()
+                    break
+            if choiceLine.startswith("[") and stageFound:
+                choices = choiceLine.split("[")[1].split("]")[0].split(";")
+                answered = False
+                for choice in choices:
+                    if answer == choice.split(":")[0].lower():
+                        answered = True
+                        for induction in data["inductions"]:
+                            if induction["id"] == message.author.id:
+                                induction["stage"] = int(choice.split(":")[1])
+                                saveJson("inductions.json", data)
+                                await sendInduction(induction["script"], message.author, induction["stage"])
+                if not answered:
+                    for choice in choices:
+                        if choice.split(":")[0] == "default":
+                            for induction in data["inductions"]:
+                                if induction["id"] == message.author.id:
+                                    induction["stage"] = int(choice.split(":")[1])
+                                    saveJson("inductions.json", data)
+                                    await sendInduction(induction["script"], message.author, induction["stage"])
 
 @client.event
 async def on_reaction_add(reaction, user):
