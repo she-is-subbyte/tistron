@@ -526,10 +526,9 @@ async def on_message(message):
             await client.close()
         else:
             message.channel.send("Error: Incorrect Password, Admins Only...")
-    
+
     elif message.content.startswith(COMMAND_PREFIX + "startInduction"):
         if message.channel.type == discord.ChannelType.private:
-            await message.channel.send("This command is still under construction.")
             with open("inductions.json", "r+") as f:
                 data = json.load(f)
                 found = False
@@ -544,6 +543,25 @@ async def on_message(message):
                     data["inductions"].append({"id": message.author.id, "script": "script.tis", "stage": 1})
                     saveJson("inductions.json", data)
                     await sendInduction("script.tis", message.author, 1)
+        else:
+            await message.channel.send("This command can only be started while in a private message channel")
+    
+    elif message.content.startswith(COMMAND_PREFIX + "restartInduction"):
+        if message.channel.type == discord.ChannelType.private:
+            with open("inductions.json", "r+") as f:
+                data = json.load(f)
+                found = False
+                for induction in data["inductions"]:
+                    if induction["id"] == str(message.author.id):
+                        target = induction
+                        found = True
+                        break
+                if not found:
+                    message.channel.send("You don't have an induction in progress... If you wish to start your induction, or because the previous one ended normally, use $startIndution.")
+                else:
+                    target["stage"] = 1
+                    saveJson("inductions.json", data)
+                    await sendInduction(target["script"], message.author, target["stage"])
         else:
             await message.channel.send("This command can only be started while in a private message channel")
 
@@ -563,15 +581,16 @@ async def on_message(message):
                 script = open(induction["script"], "r")
                 stage = induction["stage"]
                 if answer == "red":
-                    induction["stage"] == -1
+                    induction["stage"] = -1
                     saveJson("inductions.json", data)
                     await message.channel.send("Alright, on 3 you will instantly wake up")
-                    asyncio.sleep(0.5)
+                    await asyncio.sleep(2)
                     await message.channel.send("1")
-                    asyncio.sleep(0.5)
+                    await asyncio.sleep(1)
                     await message.channel.send("2")
-                    asyncio.sleep(0.5)
+                    await asyncio.sleep(1)
                     await message.channel.send("3")
+                    await asyncio.sleep(1)
                     await message.channel.send("Wake now")
                     return
                 break
